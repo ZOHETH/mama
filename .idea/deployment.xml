@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="o4" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="mama">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/yangkaixuan/project/mama" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="o4">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/yangkaixuan/project/mama" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
