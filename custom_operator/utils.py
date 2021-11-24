@@ -1,25 +1,17 @@
 from contextlib import contextmanager
+from collections import namedtuple
+
+from airflow.operators import python
+
+from common.utils import ColumnNameSpace, get_columns
 
 
-class CsvOpen(object):
-    def __init__(self, filename):
-        self.file = open(filename)
+class DFHandler:
+    def __init__(self, df=None):
+        self.columns_obj: ColumnNameSpace = get_columns()
 
-    def __enter__(self):
-        return self.file
+    def handle(self, df):
+        raise NotImplementedError
 
-    def __exit__(self, ctx_type, ctx_value, ctx_traceback):
-        self.file.close()
-
-
-@contextmanager
-def custom_open(filename):
-    f = open(filename)
-    try:
-        yield f
-    finally:
-        f.close()
-
-
-with custom_open('file') as f:
-    contents = f.read()
+    def change_column_name(self, default_name, custom_name):
+        self.columns_obj._replace(**{default_name: custom_name})
