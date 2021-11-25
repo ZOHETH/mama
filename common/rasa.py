@@ -1,5 +1,6 @@
 import json
 import requests
+import logging
 
 import sqlite3
 
@@ -51,9 +52,11 @@ class RASAClient:
     def del_conversation(self, conversation_id):
         response = requests.delete(f'{self.url}/api/conversations/{conversation_id}',
                                    headers={"Authorization": self.token})
-        return json.loads(response.text)
+        logging.error(response.ok)
+        return response.ok
 
     def clean_conversations(self):
         conversations = self.list_conversations()
+        logging.info(conversations)
         for conv in conversations:
             self.del_conversation(conv['sender_id'])
