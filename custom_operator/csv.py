@@ -20,6 +20,16 @@ class CSVOperator(BaseOperator):
                  sep=',',
                  inplace=False,
                  **kwargs) -> None:
+        """
+
+        Args:
+            read_filename:
+            handler:
+            write_filename:
+            sep:
+            inplace:
+            **kwargs:
+        """
         super().__init__(**kwargs)
         self.read_filename = read_filename
         self.write_filename = write_filename
@@ -37,7 +47,7 @@ class CSVOperator(BaseOperator):
             if data_path is not None:
                 read_path = os.path.join(data_path, read_path)
         df = pd.read_csv(read_path, encoding='utf-8', sep=self.sep)
-        res_df: pd.DataFrame = self.handler.handle(df)
+        res_df = self.handler.handle(df)
 
         if self.inplace:
             res_df.to_csv(read_path, encoding='utf-8', index=False)
@@ -45,6 +55,6 @@ class CSVOperator(BaseOperator):
             write_path = os.path.join(ds, self.write_filename)
             if data_path is not None:
                 write_path = os.path.join(data_path, write_path)
-            df.to_csv(write_path, encoding='utf-8', index=False)
+            res_df.to_csv(write_path, encoding='utf-8', index=False)
 
         return self.write_filename
