@@ -6,7 +6,7 @@ from collections import deque
 from pandas import DataFrame
 from tqdm import tqdm
 
-from dags.common.utils import DFHandler, DFWorker, mapreduce
+from common.utils import DFHandler, DFWorker, mapreduce
 
 
 def string_similar(s1, s2):
@@ -118,7 +118,7 @@ class NonTextHandler(DFHandler):
 
 
 if __name__ == '__main__':
-    from dags.common.operators import CSVOperator
+    from common.operators import CSVOperator
 
     a = CSVOperator(task_id='test',
                     read_filenames=[

@@ -4,9 +4,9 @@ from airflow.decorators import dag
 from airflow.utils.dates import days_ago
 from airflow.operators.python import PythonOperator
 
-from dags.common.operators import CSVOperator, SqliteOperator
-from dags.rasa.utils import RASAClient
-from dags.rasa.handlers import UploadConvDataHandler, MergeHandler
+from common.operators import CSVOperator, SqliteOperator
+from rasa.utils import RASAClient
+from rasa.handlers import UploadConvDataHandler, MergeHandler
 
 default_args = {
     'owner': 'zoheth',

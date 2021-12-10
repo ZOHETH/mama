@@ -5,8 +5,8 @@ import hashlib
 from pandas import DataFrame
 from tqdm import tqdm
 
-from dags.common.utils import ColumnNameSpace, get_columns, DFHandler
-from dags.rasa.utils import RASAClient
+from common.utils import ColumnNameSpace, get_columns, DFHandler
+from rasa.utils import RASAClient
 
 
 class UploadConvDataHandler(DFHandler):

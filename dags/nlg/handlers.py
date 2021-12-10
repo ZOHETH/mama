@@ -3,7 +3,7 @@ from typing import Optional
 from pandas import DataFrame
 from tqdm import tqdm
 
-from dags.common.utils import DFHandler
+from common.utils import DFHandler
 
 
 class PretrainingTextHandler(DFHandler):

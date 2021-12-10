@@ -10,7 +10,7 @@ from pandas import DataFrame
 from airflow import DAG
 from airflow.models.baseoperator import BaseOperator
 
-from dags.common.utils import DFHandler
+from common.utils import DFHandler
 
 
 def context_path(context):

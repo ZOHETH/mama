@@ -1,9 +1,9 @@
 from airflow.decorators import dag
 from airflow.utils.dates import days_ago
 
-from dags.common.operators import CSVOperator
-from dags.conversation.handlers import MessTextHandler, SmallSampleHandler, NonTextHandler
-from dags.nlg.handlers import PretrainingTextHandler
+from common.operators import CSVOperator
+from conversation.handlers import MessTextHandler, SmallSampleHandler, NonTextHandler
+from nlg.handlers import PretrainingTextHandler
 
 default_args = {
     'owner': 'zoheth',
