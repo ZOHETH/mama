@@ -4,9 +4,9 @@ from airflow.decorators import dag
 from airflow.utils.dates import days_ago
 from airflow.operators.python import PythonOperator
 
-from dags.common.operators import CSVOperator, SqliteOperator
-from dags.rasa.utils import RASAClient
-from dags.rasa.handlers import UploadConvDataHandler, MergeHandler
+from common.operators import CSVOperator, SqliteOperator
+from rasa.utils import RASAClient
+from rasa.handlers import UploadConvDataHandler, MergeHandler
 
 default_args = {
     'owner': 'zoheth',
@@ -42,4 +42,4 @@ where action_name not in ('action_session_start', 'action_listen') or intent_nam
     clean >> upload >> delay_task >> fetch_from_rasa >> merge
 
 
-rasa_upload_conversation_dag = rasa_upload_conversation()
+# rasa_upload_conversation_dag = rasa_upload_conversation()

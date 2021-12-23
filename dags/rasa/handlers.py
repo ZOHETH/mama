@@ -1,12 +1,12 @@
-import logging
+# import logging
 from typing import Optional
 import hashlib
 
 from pandas import DataFrame
 from tqdm import tqdm
 
-from dags.common.utils import ColumnNameSpace, get_columns, DFHandler
-from dags.rasa.utils import RASAClient
+from common.utils import ColumnNameSpace, get_columns, DFHandler
+from rasa.utils import RASAClient
 
 
 class UploadConvDataHandler(DFHandler):
@@ -69,7 +69,7 @@ class MergeHandler(DFHandler):
 
         intent_list = []
         action_list = []
-        logging.error(text_intent_map)
+        # logging.error(text_intent_map)
         for i, row in chat_df.iterrows():
             hash_key = hashlib.md5((row[cols.customer_id] + row[cols.text]).encode("utf-8")).hexdigest()
             intent = text_intent_map[hash_key] if hash_key in text_intent_map else ''

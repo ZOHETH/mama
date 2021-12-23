@@ -1,7 +1,7 @@
 import json
 import os
 import os.path
-import logging
+# import logging
 import sqlite3
 from typing import Dict, List, Union
 
@@ -10,19 +10,22 @@ from pandas import DataFrame
 from airflow import DAG
 from airflow.models.baseoperator import BaseOperator
 
-from dags.common.utils import DFHandler
+from common.utils import DFHandler
 
 
 def context_path(context):
-    logging.error(context)
-    data_path = context.get('data_path')
+    # logging.error(context)
+    data_path = os.environ.get('DATA_PATH')
+    # data_path = context.get('data_path')
     dag: DAG = context.get('dag')
     ds = context.get('ds', 'temp')
     cur_path = ds
     if dag is not None:
         cur_path = os.path.join(dag.dag_id, ds)
+    # if data_path is not None:
+    #     cur_path = os.path.join(data_path, ds)
     if data_path is not None:
-        cur_path = os.path.join(data_path, ds)
+        cur_path = os.path.join(data_path, cur_path)
     print(cur_path)
     if not os.path.exists(cur_path):
         os.makedirs(cur_path)
@@ -114,6 +117,8 @@ class CSVOperator(BaseOperator):
             else:
                 read_path = os.path.join(cur_path, read_filename)
             df = pd.read_csv(read_path, encoding='utf-8', sep=self.sep)
+            if 'text' in df:
+                df['text'] = df['text'].apply(str)
             df_list.append(df)
         res_df = self.handler.handle(*df_list)
 

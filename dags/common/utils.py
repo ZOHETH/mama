@@ -1,12 +1,14 @@
 from abc import ABC
 from collections import namedtuple
 from typing import Optional
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
+
+from billiard.context import Process
 
 from pandas import DataFrame
 import numpy as np
 
-columns = ['customer_id', 'text', 'speaker', 'intent', 'action_name', 'timestamp']
+columns = ['customer_id', 'text', 'speaker', 'intent', 'action_name', 'timestamp','num_c_msg','num_s_msg','percent_c_msg', 'length']
 ColumnNameSpace = namedtuple('ColumnNameSpace', columns)
 
 
@@ -19,7 +21,7 @@ class DFHandler:
     def __init__(self):
         self.columns_obj: ColumnNameSpace = get_columns()
 
-    def handle(self, *df_list) -> Optional[DataFrame]:
+    def handle(self, *df_list: DataFrame) -> Optional[DataFrame]:
         raise NotImplementedError
 
     def change_column_name(self, default_name, custom_name):

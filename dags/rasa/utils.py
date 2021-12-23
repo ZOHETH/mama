@@ -52,11 +52,11 @@ class RASAClient:
     def del_conversation(self, conversation_id):
         response = requests.delete(f'{self.url}/api/conversations/{conversation_id}',
                                    headers={"Authorization": self.token})
-        logging.error(response.ok)
+        # logging.error(response.ok)
         return response.ok
 
     def clean_conversations(self):
         conversations = self.list_conversations()
-        logging.info(conversations)
+        # logging.info(conversations)
         for conv in conversations:
             self.del_conversation(conv['sender_id'])

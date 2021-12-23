@@ -1,12 +1,15 @@
 import difflib
 import re
-from typing import Optional
+from typing import Optional, List
 from collections import deque
 
+from emoji import UNICODE_EMOJI
 from pandas import DataFrame
+import numpy as np
 from tqdm import tqdm
 
-from dags.common.utils import DFHandler, DFWorker, mapreduce
+from common.utils import DFHandler, DFWorker, mapreduce
+from conversation.core import Conversation
 
 
 def string_similar(s1, s2):
@@ -103,7 +106,8 @@ class NonTextHandler(DFHandler):
                 elif text in ('<<voice>>'):
                     voice_count += 1
             else:
-                patten = re.compile(r'https?:?/?/(?:[-\w.//?=&]|(?:%[\da-fA-F]{2}))+')
+                patten = re.compile(
+                    r'https?:?/?/(?:[-\w.//?=&]|(?:%[\da-fA-F]{2}))+')
                 text = re.sub(patten, '', text)
                 data.append([row[col.customer_id],
                              row[col.timestamp],
@@ -117,8 +121,60 @@ class NonTextHandler(DFHandler):
         return df
 
 
+class SummaryHandler(DFHandler):
+    def __init__(self):
+        super().__init__()
+
+    def create_summary_df(self, convs: List[Conversation]):
+        col = self.columns_obj
+        data = []
+        for conv in convs:
+            data.append([conv.index, conv.length, conv.num_c_msg,
+                        conv.num_s_msg, conv.percent_c_msg])
+        df = DataFrame(data, columns=[
+            col.customer_id, col.length, col.num_c_msg, col.num_s_msg, col.percent_c_msg])
+        return df
+
+    def handle(self, df: DataFrame) -> Optional[DataFrame]:
+        col = self.columns_obj
+        df[col.text] = df[col.text].apply(str)
+        df.set_index(col.customer_id, inplace=True)
+        ids = df.index.drop_duplicates()
+        convs = []
+        for index in ids:
+            conv = Conversation(index, df.loc[index])
+            convs.append(conv)
+
+        s_df = self.create_summary_df(convs)
+        return s_df
+
+
+class PremiumConversationHandler(DFHandler):
+    """
+    file1: summary csv
+    file2: 
+    """
+
+    def __init__(self, sample=100):
+        super().__init__()
+        self.sample = sample//2
+
+    def handle(self, *df_list: DataFrame) -> Optional[DataFrame]:
+        col = self.columns_obj
+        df1, df2 = df_list
+        n = len(df1)//5  # Pareto principle
+        pool1 = df1.nlargest(n, columns=[col.num_c_msg])
+        pool2 = df1.nlargest(n, columns=[col.percent_c_msg])
+        ids1 = pool1.sample(self.sample)[col.customer_id].values
+        ids2 = pool2.sample(self.sample)[col.customer_id].values
+        ids = list(ids1)
+        ids.extend(list(ids2))
+        return df2.loc[df2[col.customer_id].isin(ids)]
+
+
+
 if __name__ == '__main__':
-    from dags.common.operators import CSVOperator
+    from common.operators import CSVOperator
 
     a = CSVOperator(task_id='test',
                     read_filenames=[

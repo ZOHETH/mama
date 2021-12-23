@@ -38,13 +38,13 @@
 #
 # Feel free to modify this file to suit your needs.
 ---
-version: '3'
+version: '3.7'
 x-airflow-common:
   &airflow-common
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.2.2-python3.8}
+  image: registry.cn-beijing.aliyuncs.com/kezhiyin/airflow:latest
   # build: .
   environment:
     &airflow-common-env
@@ -57,10 +57,13 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    DATA_PATH: /data
+    HF_HOME: /data/hf_cache_home
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
+    - /home/yangkaixuan/datafile/airflow:/data
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -99,7 +102,7 @@ services:
     <<: *airflow-common
     command: webserver
     ports:
-      - 8080:8080
+      - 8090:8080
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 10s
@@ -145,6 +148,13 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["4"]
+              capabilities: [ gpu ]
 
   airflow-triggerer:
     <<: *airflow-common

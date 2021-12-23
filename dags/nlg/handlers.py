@@ -1,9 +1,12 @@
 from typing import Optional
+from collections import deque
 
 from pandas import DataFrame
 from tqdm import tqdm
 
-from dags.common.utils import DFHandler
+import sys
+sys.path.append('.')
+from common.utils import DFHandler
 
 
 class PretrainingTextHandler(DFHandler):
@@ -35,3 +38,67 @@ class PretrainingTextHandler(DFHandler):
         df = DataFrame(data, columns=['data'])
 
         return df
+
+
+class BenchmarkHandler(DFHandler):
+    def __init__(self, model_path):
+        super().__init__()
+        self.model_path = model_path
+
+    def get_input(self, contexts, tokenizer):
+        inputs = []
+        length = 0
+        for ctx in contexts:
+            length += len(ctx)
+        while length > 200:
+            x = contexts.popleft()
+            length -= len(x)
+        for ctx in contexts:
+            inputs.append(tokenizer.encode(ctx, return_tensors='tf'))
+        prompt = "销售："
+        inputs.append(tokenizer.encode(
+            prompt, add_special_tokens=False, return_tensors='tf'))
+        import tensorflow as tf
+        inputs = tf.concat(inputs, 1)
+        return length, inputs
+
+    def handle(self, df: DataFrame) -> Optional[DataFrame]:
+        from transformers import AutoTokenizer
+        from transformers.models.xlnet.modeling_tf_xlnet import TFXLNetLMHeadModel
+        model = TFXLNetLMHeadModel.from_pretrained(self.model_path)
+        model.transformer.attn_type = 'bi'
+        tokenizer = AutoTokenizer.from_pretrained("hfl/chinese-xlnet-base")
+        pretraining_text_handler = PretrainingTextHandler()
+        df = pretraining_text_handler.handle(df)
+        contexts = deque()
+        data = []
+        gen=False
+        for i, row in tqdm(df.iterrows(), total=df.shape[0], mininterval=5):
+            if row['data'] == '<eod>':
+                contexts.clear()
+                data.append('')
+                continue
+            if row['data'][0] == '销' and gen and len(contexts) > 0:
+                context_length, inputs = self.get_input(contexts, tokenizer)
+                outputs = model.generate(inputs, num_beams=20, no_repeat_ngram_size=2,
+                                         max_length=context_length+20, do_sample=True, top_p=0.95)
+                generated = tokenizer.decode(
+                    outputs[0], skip_special_tokens=True)
+                data.append(generated[context_length+len(contexts):])
+                gen=False
+            else:
+                if row['data'][0] == '客':
+                    gen=True
+                data.append('')
+            contexts.append(row['data'])
+        print(data)
+        df.insert(1, 'nlg', data)
+        return df
+
+
+if __name__ == '__main__':
+    import pandas as pd
+    bh=BenchmarkHandler('/home/yangkaixuan/eden/transformer/mymodel1')
+    df=pd.read_csv('/home/yangkaixuan/datafile/airflow/nlg_preprocess/2021-12-22/premium.csv')
+    df=bh.handle(df)
+    df.to_csv('result.csv')
