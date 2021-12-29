@@ -49,7 +49,7 @@ def nlg_preprocess():
                              write_filename='train_data.csv')
 
     clean_mess >> clean_non_text >> train_data
-    clean_non_text >> summary >> extract
+    clean_non_text >> summary >> extract >> benchmark
     # extract >> benchmark
 
 

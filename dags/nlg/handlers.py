@@ -60,7 +60,7 @@ class BenchmarkHandler(DFHandler):
             prompt, add_special_tokens=False, return_tensors='tf'))
         import tensorflow as tf
         inputs = tf.concat(inputs, 1)
-        return length, inputs
+        return inputs
 
     def handle(self, df: DataFrame) -> Optional[DataFrame]:
         from transformers import AutoTokenizer
@@ -72,33 +72,39 @@ class BenchmarkHandler(DFHandler):
         df = pretraining_text_handler.handle(df)
         contexts = deque()
         data = []
-        gen=False
         for i, row in tqdm(df.iterrows(), total=df.shape[0], mininterval=5):
             if row['data'] == '<eod>':
                 contexts.clear()
                 data.append('')
                 continue
-            if row['data'][0] == '销' and gen and len(contexts) > 0:
-                context_length, inputs = self.get_input(contexts, tokenizer)
-                outputs = model.generate(inputs, num_beams=20, no_repeat_ngram_size=2,
-                                         max_length=context_length+20, do_sample=True, top_p=0.95)
-                generated = tokenizer.decode(
-                    outputs[0], skip_special_tokens=True)
-                data.append(generated[context_length+len(contexts):])
-                gen=False
-            else:
-                if row['data'][0] == '客':
-                    gen=True
-                data.append('')
             contexts.append(row['data'])
-        print(data)
+            if row['data'][0] == '客' and len(contexts) > 0:
+                inputs = self.get_input(contexts, tokenizer)
+                leng = inputs.shape[-1]
+                print(leng)
+                outputs = model.generate(inputs,
+                                         num_beams=20, 
+                                         max_length=leng+20,
+                                         do_sample=True, top_p=0.95,
+                                         num_return_sequences=3,
+                                         no_repeat_ngram_size=3,
+                                         early_stopping=True)
+                result = []
+                for i, sample_output in enumerate(outputs):
+                    generated = tokenizer.decode(
+                        sample_output[leng:], skip_special_tokens=False)
+                    result.append(f'{i}: {generated}')
+                data.append('\n'.join(result))
+            else:
+                data.append('')
         df.insert(1, 'nlg', data)
         return df
 
 
 if __name__ == '__main__':
     import pandas as pd
-    bh=BenchmarkHandler('/home/yangkaixuan/eden/transformer/mymodel1')
-    df=pd.read_csv('/home/yangkaixuan/datafile/airflow/nlg_preprocess/2021-12-22/premium.csv')
-    df=bh.handle(df)
+    bh = BenchmarkHandler('/home/yangkaixuan/eden/transformer/mymodel1')
+    df = pd.read_csv(
+        '/home/yangkaixuan/datafile/airflow/nlg_preprocess/2021-12-22/premium.csv')
+    df = bh.handle(df)
     df.to_csv('result.csv')
