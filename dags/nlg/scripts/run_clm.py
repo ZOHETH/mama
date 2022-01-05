@@ -22,7 +22,7 @@ from transformers import create_optimizer
 from sklearn.model_selection import train_test_split
 
 
-output_dir = 'mymodel99'
+output_dir = 'mymodel4'
 train_file = 'data.csv'
 max_seq_length = 256
 block_size = 256
@@ -74,7 +74,8 @@ def create_mask(self, qlen, mlen):
 
 
 def data_from_tfrecord():
-    dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/repo/models/official/nlp/xlnet/pretrain/tfrecords/train-0-0.bsz-4.seqlen-256.reuse-128.uni.alpha-6.beta-1.fnp-256.tfrecords'])
+    dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/repo/models/official/nlp/xlnet/long_pretrain/tfrecords/train-0-0.bsz-4.seqlen-256.reuse-128.uni.alpha-6.beta-1.fnp-256.tfrecords'])
+    # dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/project/mama/1.tfrecord'])
     seq_len=256
     record_spec = {
             "input": tf.io.FixedLenFeature([seq_len], tf.int64),

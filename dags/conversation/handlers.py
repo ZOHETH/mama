@@ -105,6 +105,8 @@ class NonTextHandler(DFHandler):
                     mess_count += 1
                 elif text in ('<<voice>>'):
                     voice_count += 1
+            elif '您的服务已升级' in text or '我是德华安顾' in text:
+                mess_count += 1
             else:
                 patten = re.compile(
                     r'https?:?/?/(?:[-\w.//?=&]|(?:%[\da-fA-F]{2}))+')

@@ -581,7 +581,6 @@ def create_tfrecords(save_dir, basename, data, bsz_per_host, seq_len,
       # the last two CLS's are not used, just for padding purposes
       # tgt = np.concatenate([tgt, a_target, b_target, cls_array, cls_array])
       tgt = np.concatenate([tgt, a_target, b_target])
-      print(tgt.shape[0], seq_len)
       assert tgt.shape[0] == seq_len
 
       is_masked = np.concatenate([mask_0, mask_1], 0)
