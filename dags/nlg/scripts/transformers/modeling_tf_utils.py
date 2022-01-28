@@ -886,12 +886,12 @@ class TFPreTrainedModel(tf.keras.Model, TFModelUtilsMixin, TFGenerationMixin, Pu
             y = tf.zeros(tf.shape(x["input_ids"])[0], dtype=tf.int64)
         # Run forward pass.
 
-        if getattr(self, "_past", None) is not None:
-            x["mems"] = self._past
+        # if getattr(self, "_past", None) is not None:
+            # x["mems"] = self._past
         with tf.GradientTape() as tape:
             y_pred = self(x, training=True)
             loss = self.compiled_loss(y, y_pred, sample_weight, regularization_losses=self.losses)
-        self._past = y_pred["mems"]
+        # self._past = y_pred["mems"]
         # Run backwards pass.
         self.optimizer.minimize(loss, self.trainable_variables, tape=tape)
         # When y_pred is a ModelOutput and y is a tf.Tensor the metrics update

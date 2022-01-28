@@ -22,16 +22,16 @@ from transformers import create_optimizer
 from sklearn.model_selection import train_test_split
 
 
-output_dir = 'mymodel4'
-train_file = 'data.csv'
+output_dir = 'mymodel5'
+train_file = 'train_data_phone.csv'
 max_seq_length = 256
 block_size = 256
-batch_size =4
+batch_size = 8
 num_train_epochs = 3
 learning_rate = 5e-5
 preprocessing_num_workers = 1
 overwrite_cache = False
-validation_split_percentage = 30
+validation_split_percentage = 1
 
 logger = logging.Logger(__name__)
 
@@ -74,16 +74,24 @@ def create_mask(self, qlen, mlen):
 
 
 def data_from_tfrecord():
-    dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/repo/models/official/nlp/xlnet/long_pretrain/tfrecords/train-0-0.bsz-4.seqlen-256.reuse-128.uni.alpha-6.beta-1.fnp-256.tfrecords'])
-    # dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/project/mama/1.tfrecord'])
+    # dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/repo/models/official/nlp/xlnet/long_pretrain/tfrecords/train-0-0.bsz-4.seqlen-256.reuse-128.uni.alpha-6.beta-1.fnp-256.tfrecords'])
+    dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/project/mama/1.tfrecord'])
+    # dataset=tf.data.TFRecordDataset(['/home/yangkaixuan/project/cocoon/1.tfrecords'])
     seq_len=256
     record_spec = {
             "input": tf.io.FixedLenFeature([seq_len], tf.int64),
             "target": tf.io.FixedLenFeature([seq_len], tf.int64),
             "seg_id": tf.io.FixedLenFeature([seq_len], tf.int64),
-            "label": tf.io.FixedLenFeature([1], tf.int64),
+            # "label": tf.io.FixedLenFeature([1], tf.int64),
             "is_masked": tf.io.FixedLenFeature([seq_len], tf.int64),
         }
+    # record_spec = {
+    #         "input_ids": tf.io.FixedLenFeature([seq_len], tf.int64),
+    #         "labels": tf.io.FixedLenFeature([seq_len], tf.int64),
+    #         "token_type_ids": tf.io.FixedLenFeature([seq_len], tf.int64),
+    #         "attention_mask": tf.io.FixedLenFeature([seq_len], tf.int64),
+    #         "target_mapping": tf.io.FixedLenFeature([seq_len], tf.int64),
+    #     }
     def _parse_function(example_proto):
         # Parse the input `tf.Example` proto using the dictionary above.
         return tf.io.parse_single_example(example_proto, record_spec)
@@ -183,17 +191,17 @@ def data_from_hf():
     return tf_train_dataset,tf_eval_dataset,len(train_dataset)
 
 def main():
-    
-    tokenizer = AutoTokenizer.from_pretrained("hfl/chinese-xlnet-base")
-    model = TFXLNetLMHeadModel.from_pretrained("hfl/chinese-xlnet-base")
+    # tokenizer = AutoTokenizer.from_pretrained("hfl/chinese-xlnet-base")
+    # model = TFXLNetLMHeadModel.from_pretrained("hfl/chinese-xlnet-base")
+    model = TFXLNetLMHeadModel.from_pretrained("mymodel_phone")
     model.transformer.attn_type = 'uni'
-    model.transformer.reuse_len=128
-    model.transformer.mem_len=192
-    model.transformer.use_mems_train=True
+    # model.transformer.reuse_len=128
+    # model.transformer.mem_len=192
+    # model.transformer.use_mems_train=True
     model.transformer.create_mask = MethodType(create_mask, model.transformer)
 
     tf_train_dataset, ds_size=data_from_tfrecord()
-    # tf_train_dataset,_, ds_size=data_from_hf()
+    # tf_train_dataset,tf_eval_dataset, ds_size=data_from_hf()
 
     
     batches_per_epoch = ds_size // batch_size
@@ -248,7 +256,6 @@ def main():
     print(f"  Final train perplexity: {train_perplexity:.3f}")
     # print(f"  Final validation loss: {history.history['val_loss'][-1]:.3f}")
     # print(f"  Final validation perplexity: {validation_perplexity:.3f}")
-    # endregion
 
 
 if __name__ == "__main__":

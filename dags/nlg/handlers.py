@@ -4,11 +4,14 @@ import copy
 
 from pandas import DataFrame
 from tqdm import tqdm
+import tensorflow as tf
 
 import sys
 sys.path.append('dags')
 from common.utils import DFHandler
 
+CUSTOMER_TOKENS = [12967, 30]
+SALES_TOKENS = [4925, 30]
 
 class PretrainingTextHandler(DFHandler):
     def __init__(self):
@@ -27,9 +30,10 @@ class PretrainingTextHandler(DFHandler):
                 prefix = '客户：'
             else:
                 prefix = '销售：'
-            if row[col.timestamp] - last_timestamp > 3600 or row['mess_count'] + row['voice_count'] > 5:
-                if row[col.customer_id] == cur_customer:
-                    data[-1] = data[-1] + '<eop>'
+            # if row[col.timestamp] - last_timestamp > 3600 or row['mess_count'] + row['voice_count'] > 5:
+            # if row[col.timestamp] - last_timestamp > 3600 or row['mess_count'] + row['voice_count'] > 5:
+            #     if row[col.customer_id] == cur_customer:
+            #         data[-1] = data[-1] + '<eop>'
             if row[col.customer_id] != cur_customer:
                 if cur_customer is not None:
                     data.append('<eod>')
@@ -178,19 +182,23 @@ class BenchmarkHandler(DFHandler):
             if row['data'][0] == '客' and len(contexts) > 0:
                 inputs = self.get_input(contexts, tokenizer)
                 leng = inputs.shape[-1]
-                print(leng)
+                # outputs = model.generate(inputs,
+                #                          num_beams=20, 
+                #                          max_length=leng+20,
+                #                          do_sample=True, top_p=0.95,
+                #                          num_return_sequences=3,
+                #                          no_repeat_ngram_size=3,
+                #                          early_stopping=True)
                 outputs = model.generate(inputs,
-                                         num_beams=20, 
-                                         max_length=leng+20,
-                                         do_sample=True, top_p=0.95,
-                                         num_return_sequences=3,
-                                         no_repeat_ngram_size=3,
-                                         early_stopping=True)
+                         max_length=leng+20, do_sample=True, top_p=0.90, top_k=30,num_return_sequences=30)
                 result = []
+                generateds=[]
                 for i, sample_output in enumerate(outputs):
                     generated = tokenizer.decode(
                         sample_output[leng:], skip_special_tokens=False)
-                    result.append(f'{i}: {generated}')
+                    generateds.append(generated)
+                generateds.sort(key=lambda x :len(set(x)), reverse=True)
+                result=[f'{i}: {generated}' for i,generated in enumerate(generateds[:3])]
                 data.append('\n'.join(result))
                 print(result[0])
             else:
@@ -198,6 +206,71 @@ class BenchmarkHandler(DFHandler):
         df.insert(1, 'nlg', data)
         return df
 
+
+class BenchmarkHandler0125(DFHandler):
+    def __init__(self, model_path):
+        super().__init__()
+        self.model_path = model_path
+
+    def handle(self, df: DataFrame) -> Optional[DataFrame]:
+        from transformers import AutoTokenizer
+        from transformers.models.xlnet.modeling_tf_xlnet import TFXLNetLMHeadModel
+        model = TFXLNetLMHeadModel.from_pretrained(self.model_path)
+        model.transformer.attn_type = 'bi'
+        tokenizer = AutoTokenizer.from_pretrained("hfl/chinese-xlnet-base")
+        pretraining_text_handler = PretrainingTextHandler()
+        df = pretraining_text_handler.handle(df)
+        contexts = deque()
+        cur_len=0
+        data = []
+        texts=df['data'].values
+        # df=df.head(200)
+        for text in tqdm(texts, total=len(df), mininterval=5):
+            if text == '<eod>':
+                contexts.clear()
+                data.append('')
+                cur_len=0
+                continue
+            is_staff=text[0]=='销'
+            prefix= SALES_TOKENS if is_staff else CUSTOMER_TOKENS
+            temp=prefix+tokenizer.encode(text, add_special_tokens=False)
+            cur_len+=len(temp)
+            contexts.append(temp)
+
+            if is_staff:
+                data.append('')
+            else:
+                while cur_len>230 and len(contexts)>1:
+                    x = contexts.popleft()
+                    cur_len -= len(x)
+                inputs=[]
+                for ctx in contexts:
+                    inputs.extend(ctx)
+                inputs.extend(SALES_TOKENS)
+                n=len(inputs)
+                inputs=tf.convert_to_tensor(
+                    inputs, dtype=None, dtype_hint=None, name=None
+                )
+                inputs=inputs[None,:]
+                outputs = model.generate(inputs,
+                                         num_beams=20, 
+                                         max_length=n+20,
+                                         do_sample=True, top_p=0.95,
+                                         num_return_sequences=3,
+                                         no_repeat_ngram_size=3,
+                                         early_stopping=True)
+                # outputs = model.generate(inputs,temperature=0.7, repetition_penalty =2,
+                #          max_length=n+20, do_sample=True, top_p=0.95,top_k=30,num_return_sequences=20)
+                # outputs = model.generate(inputs,num_beams=5, repetition_penalty =3,
+                        #  max_length=n+20, do_sample=True, top_p=0.90,num_return_sequences=3)
+                generateds=[tokenizer.decode(x[n:], skip_special_tokens=True) for x in outputs]
+                generateds.sort(key=lambda x :len(set(x)), reverse=True)
+                result=[f'{i+1}: {generated}' for i,generated in enumerate(generateds[:3])]
+                data.append('\n'.join(result))
+                print('\n'.join(result))
+
+        df.insert(1, 'nlg', data)
+        return df
 
 class IdsHandler(DFHandler):
     def __init__(self):
@@ -213,11 +286,18 @@ class IdsHandler(DFHandler):
 
 if __name__ == '__main__':
     import pandas as pd
-    bh = BenchmarkHandler('/home/yangkaixuan/datafile/airflow/mymodel3')
-    # pdh=IdsHandler()
+    # bh = BenchmarkHandler('/home/yangkaixuan/project/mama/mymodel3')
+    bh = BenchmarkHandler0125('/home/yangkaixuan/project/mama/mymodel6')
+    # pdh=PretrainingTextHandler()
     df = pd.read_csv(
         '/home/yangkaixuan/datafile/airflow/nlg_preprocess/2021-12-22/premium.csv')
+    # df = pd.read_csv(
+        # '/home/yangkaixuan/download/all_phone.tsv',sep='\t')
+    # print(len(df))
+    # df.drop_duplicates(subset=['customer_id','timestamp'],keep='first',inplace=True)
+    # print(len(df))
+    # df.sort_values(['customer_id','timestamp'],inplace=True)
     df = bh.handle(df)
     # df=pd.read_csv('temp.csv')
     # df=df['data']
-    df.to_csv('result3-1.csv',index=False)
+    df.to_csv('result6-4-1.csv',index=False)
